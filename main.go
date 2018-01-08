@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"./controllers"
 	"./views"
 
 	"github.com/gorilla/mux"
@@ -17,13 +18,14 @@ func main() {
 	homeView = views.NewView("bootstrap", "views/home.gohtml")
 	contactView = views.NewView("bootstrap", "views/contact.gohtml")
 	faqView = views.NewView("bootstrap", "views/faq.gohtml")
-	signUpView = views.NewView("bootstrap", "views/signup.gohtml")
+	usersC := controllers.NewUsers()
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", home)
 	r.HandleFunc("/contact", contact)
 	r.HandleFunc("/faq", faq)
-	r.HandleFunc("/signup", signUp)
+	// takes path and usersC's ResponseWriter
+	r.HandleFunc("/signup", usersC.New)
 	http.ListenAndServe(":3000", r)
 }
 
@@ -40,11 +42,6 @@ func contact(w http.ResponseWriter, r *http.Request) {
 func faq(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	must(faqView.Render(w, nil))
-}
-
-func signUp(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html")
-	must(signUpView.Render(w, nil))
 }
 
 func must(err error) {
