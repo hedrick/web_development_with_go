@@ -25,6 +25,12 @@ type UserService struct {
 	db *gorm.DB
 }
 
+// Create will create the provided user and backfill data
+// like the ID, CreatedAt, and UpdatedAt fields.
+func (us *UserService) Create(user *User) error {
+	return us.db.Create(user).Error
+}
+
 /*
 	ById will look up a user with the provided ID.
 	If the user is found, we return a nil error
