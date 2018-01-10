@@ -15,6 +15,7 @@ var (
 	// ErrInvalidID is returned when an invalid ID is provided
 	// to a method like Delete.
 	ErrInvalidID = errors.New("models: ID provided was invalid")
+	userPwPepper = "kffphrhrrrr"
 )
 
 // User struct for GORM model
@@ -34,8 +35,9 @@ type UserService struct {
 // Create will create the provided user and backfill data
 // like the ID, CreatedAt, and UpdatedAt fields.
 func (us *UserService) Create(user *User) error {
+	pwBytes := []byte(user.Password + userPwPepper)
 	hashedBytes, err := bcrypt.GenerateFromPassword(
-		[]byte(user.Password), bcrypt.DefaultCost)
+		pwBytes, bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
