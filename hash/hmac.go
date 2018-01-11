@@ -25,4 +25,7 @@ func (h HMAC) Hash(input string) string {
 // NewHMAC creates and returns a new HMAC object
 func NewHMAC(key string) HMAC {
 	h := hmac.New(sha256.New, []byte(key))
+	return HMAC{
+		hmac: h,
+	}
 }
