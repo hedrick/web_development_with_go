@@ -48,3 +48,11 @@ func (d *Data) SetAlert(err error) {
 		Message: msg,
 	}
 }
+
+// AlertError constructs an Alert for a Data receiever
+func (d *Data) AlertError(msg string) {
+	d.Alert = &Alert{
+		Level:   AlertLvlError,
+		Message: msg,
+	}
+}
