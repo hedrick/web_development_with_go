@@ -318,28 +318,13 @@ func (ug *userGorm) ByRemember(rememberHash string) (*User, error) {
 }
 
 // NewUserService - creates and returns a new UserService
-func NewUserService(connectionInfo string) (UserService, error) {
-	ug, err := newUserGorm(connectionInfo)
-	if err != nil {
-		return nil, err
-	}
+func NewUserService(db *gorm.DB) UserService {
+	ug := &userGorm{db}
 	hmac := hash.NewHMAC(hmacSecretKey)
 	uv := newUserValidator(ug, hmac)
 	return &userService{
 		UserDB: uv,
-	}, nil
-}
-
-// newUserGorm - creates and returns a new userGorm
-func newUserGorm(connectionInfo string) (*userGorm, error) {
-	db, err := gorm.Open("postgres", connectionInfo)
-	if err != nil {
-		return nil, err
 	}
-	db.LogMode(true)
-	return &userGorm{
-		db: db,
-	}, nil
 }
 
 // Close - closes UserService database connection
