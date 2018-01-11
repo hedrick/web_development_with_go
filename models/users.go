@@ -28,6 +28,7 @@ var (
 )
 
 var _ UserDB = &userGorm{}
+var _ UserService = &userService{}
 
 // User struct for GORM model
 type User struct {
@@ -40,8 +41,21 @@ type User struct {
 	RememberHash string `gorm:"not null;unique_index"`
 }
 
-// UserService - Abstraction Layer for Users DB
-type UserService struct {
+// userService - Abstraction Layer for Users DB
+type userService struct {
+	UserDB
+}
+
+// UserService is a set of methods used to manipulate and
+// work with the user model
+type UserService interface {
+	// AUthenticate will verify the provided email address and
+	// password are correct. If they are correct, the user
+	// corresponding to that email will be returned. Otherwise
+	// You will receive either:
+	// ErrNotFound, ErrInvalidPassword, or another error if
+	// something goes wrong.
+	Authenticate(email, password string) (*User, error)
 	UserDB
 }
 
@@ -124,7 +138,7 @@ func (ug *userGorm) Create(user *User) error {
 // user, nil
 // Otherwise if another error is encountered this will return
 // nil, error
-func (us *UserService) Authenticate(
+func (us *userService) Authenticate(
 	email, password string) (*User, error) {
 	foundUser, err := us.ByEmail(email)
 	if err != nil {
@@ -222,12 +236,12 @@ func (ug *userGorm) ByRemember(token string) (*User, error) {
 }
 
 // NewUserService - creates and returns a new UserService
-func NewUserService(connectionInfo string) (*UserService, error) {
+func NewUserService(connectionInfo string) (UserService, error) {
 	ug, err := newUserGorm(connectionInfo)
 	if err != nil {
 		return nil, err
 	}
-	return &UserService{
+	return &userService{
 		UserDB: userValidator{
 			UserDB: ug,
 		},
