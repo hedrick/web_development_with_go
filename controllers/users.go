@@ -41,9 +41,7 @@ func NewUsers(us models.UserService) *Users {
 // New - handler to handle web requests when a user visits
 // the signup page
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	if err := u.NewView.Render(w, nil); err != nil {
-		panic(err)
-	}
+	u.NewView.Render(w, nil)
 }
 
 // Create is used to process the signup form when a user
