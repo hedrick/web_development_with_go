@@ -41,15 +41,15 @@ func NewUsers(us models.UserService) *Users {
 // New - handler to handle web requests when a user visits
 // the signup page
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	type Alert struct {
-		Level   string
-		Message string
-	}
-	alert := Alert{
-		Level:   "success",
+	alert := views.Alert{
+		Level:   views.AlertLvlSuccess,
 		Message: "Successfully rendered a dynamic alert!",
 	}
-	if err := u.NewView.Render(w, alert); err != nil {
+	data := views.Data{
+		Alert: &alert,
+		Yield: "this can be any data b/c its type is interface",
+	}
+	if err := u.NewView.Render(w, data); err != nil {
 		panic(err)
 	}
 }
