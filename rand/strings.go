@@ -10,7 +10,7 @@ const RememberTokenBytes = 32
 
 // RememberToken is a helper function designed to generate
 // remember tokens of a predetermined byte size.
-func rememberToken() (string, error) {
+func RememberToken() (string, error) {
 	return String(RememberTokenBytes)
 }
 
