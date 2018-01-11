@@ -8,6 +8,7 @@ import (
 type Services struct {
 	Gallery GalleryService
 	User    UserService
+	db      *gorm.DB
 }
 
 // NewServices opens a database connection, checks for
@@ -22,5 +23,25 @@ func NewServices(connectionInfo string) (*Services, error) {
 	return &Services{
 		User:    NewUserService(db),
 		Gallery: &galleryGorm{},
+		db:      db,
 	}, nil
+}
+
+// Close - closes the database connection
+func (s *Services) Close() error {
+	return s.db.Close()
+}
+
+// AutoMigrate attempts to automatically migrate all tables
+func (s *Services) AutoMigrate() error {
+	return s.db.AutoMigrate(&User{}, &Gallery{}).Error
+}
+
+// DestructiveReset drops all tables and then rebuilds them
+func (s *Services) DestructiveReset() error {
+	err := s.db.DropTableIfExists(&User{}, &Gallery{}).Error
+	if err != nil {
+		return err
+	}
+	return s.AutoMigrate()
 }
