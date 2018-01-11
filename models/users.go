@@ -32,9 +32,13 @@ var (
 	// ErrEmailInvalid is returned when an email address provided
 	// does not match any of our requirements
 	ErrEmailInvalid = errors.New("models: email address is not valid")
-	// ErrEMailTaken is returned when an update or create is attempted
+	// ErrEmailTaken is returned when an update or create is attempted
 	// with an email address that is already in use
 	ErrEmailTaken = errors.New("models: email address is already taken")
+	// ErrPasswordTooShort is returned when a user tries to set
+	// a password that is less than 8 characters long.
+	ErrPasswordTooShort = errors.New("models: password must " +
+		"be at least 8 characters long")
 
 	userPwPepper = "kffphrhrrrr"
 )
@@ -152,6 +156,7 @@ func (us *userService) Authenticate(
 // like the ID, CreatedAt, and UpdatedAt fields.
 func (uv *userValidator) Create(user *User) error {
 	err := runUserValFns(user,
+		uv.passwordMinLength,
 		uv.bcryptPassword,
 		uv.setRememberIfUnset,
 		uv.hmacRemember,
@@ -174,6 +179,7 @@ func (ug *userGorm) Create(user *User) error {
 // Update will hash a remember token if it is provided.
 func (uv *userValidator) Update(user *User) error {
 	err := runUserValFns(user,
+		uv.passwordMinLength,
 		uv.bcryptPassword,
 		uv.hmacRemember,
 		uv.normalizeEmail,
@@ -442,6 +448,16 @@ func (uv *userValidator) emailIsAvail(user *User) error {
 		// address, so we need to see if this is the same user we
 		// are updating, or if we have a conflict.
 		return ErrEmailTaken
+	}
+	return nil
+}
+
+func (uv *userValidator) passwordMinLength(user *User) error {
+	if user.Password == "" {
+		return nil
+	}
+	if len(user.Password) < 8 {
+		return ErrPasswordTooShort
 	}
 	return nil
 }
