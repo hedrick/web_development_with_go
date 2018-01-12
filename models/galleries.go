@@ -18,6 +18,7 @@ type GalleryService interface {
 
 // GalleryDB interface
 type GalleryDB interface {
+	ByID(id uint) (*Gallery, error)
 	Create(gallery *Gallery) error
 }
 
@@ -58,6 +59,17 @@ func (gv *galleryValidator) Create(gallery *Gallery) error {
 		return err
 	}
 	return gv.GalleryDB.Create(gallery)
+}
+
+// ByID looks up a Gallery by ID
+func (gg *galleryGorm) ByID(id uint) (*Gallery, error) {
+	var gallery Gallery
+	db := gg.db.Where("id = ?", id)
+	err := first(db, &gallery)
+	if err != nil {
+		return nil, err
+	}
+	return &gallery, nil
 }
 
 // NewGalleryService returns a new instance of a GalleryService
