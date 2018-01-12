@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -16,6 +15,7 @@ type Galleries struct {
 	New      *views.View
 	ShowView *views.View
 	gs       models.GalleryService
+	r        *mux.Router
 }
 
 // GalleryForm type
@@ -23,12 +23,18 @@ type GalleryForm struct {
 	Title string `schema:"title"`
 }
 
+const (
+	// ShowGallery named route
+	ShowGallery = "show_gallery"
+)
+
 // NewGalleries returns a new Galleries type to be rendered
-func NewGalleries(gs models.GalleryService) *Galleries {
+func NewGalleries(gs models.GalleryService, r *mux.Router) *Galleries {
 	return &Galleries{
 		New:      views.NewView("bootstrap", "galleries/new"),
 		ShowView: views.NewView("bootstrap", "galleries/show"),
 		gs:       gs,
+		r:        r,
 	}
 }
 
@@ -51,7 +57,13 @@ func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
 		g.New.Render(w, vd)
 		return
 	}
-	fmt.Fprintln(w, gallery)
+	url, err := g.r.Get(ShowGallery).URL("id",
+		strconv.Itoa(int(gallery.ID)))
+	if err != nil {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+	http.Redirect(w, r, url.path, http.StatusFound)
 }
 
 // Show GET /galleries/:id
