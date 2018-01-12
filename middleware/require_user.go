@@ -1,9 +1,9 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 
+	"../context"
 	"../models"
 )
 
@@ -31,11 +31,21 @@ func (mw *RequireUser) ApplyFn(next http.HandlerFunc) http.HandlerFunc {
 		if err != nil {
 			http.Redirect(w, r, "/login", http.StatusFound)
 		}
-		fmt.Println("User found: ", user)
+
+		// Get the context from our request
+		ctx := r.Context()
+		// Create a new context from the existing one that has
+		// our user stored in it with the private user key
+		ctx = context.WithUser(ctx, user)
+		// Create a new request from the existing one with our
+		// context attached to it and assign it back to 'r'.
+		r = r.WithContext(ctx)
+		// Call next(w, r) with our update context.
 		next(w, r)
 	})
 }
 
+// Apply applies a handler
 func (mw *RequireUser) Apply(next http.Handler) http.HandlerFunc {
 	return mw.ApplyFn(next.ServeHTTP)
 }
