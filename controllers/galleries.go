@@ -63,7 +63,7 @@ func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
-	http.Redirect(w, r, url.path, http.StatusFound)
+	http.Redirect(w, r, url.Path, http.StatusFound)
 }
 
 // Show GET /galleries/:id
