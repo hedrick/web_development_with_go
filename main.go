@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"./controllers"
+	"./middleware"
 	"./models"
 	"./views"
 
@@ -34,9 +35,17 @@ func main() {
 	defer services.Close()
 	services.AutoMigrate()
 
+	requireUserMw := middleware.RequireUser{
+		UserService: services.User,
+	}
+
 	staticC := controllers.NewStatic()
 	usersC := controllers.NewUsers(services.User)
 	galleriesC := controllers.NewGalleries(services.Gallery)
+	// galleriesC.New is an http.Handler, so we use Apply
+	newGallery := requireUserMw.Apply(galleriesC.New)
+	// galleriesC.Create is an http.HandlerFun, so we use ApplyFn
+	createGallery := requireUserMw.ApplyFn(galleriesC.Create)
 
 	r := mux.NewRouter()
 	r.Handle("/", staticC.Home).Methods("GET")
@@ -48,8 +57,8 @@ func main() {
 	r.Handle("/login", usersC.LoginView).Methods("GET")
 	r.HandleFunc("/login", usersC.Login).Methods("POST")
 	r.HandleFunc("/cookietest", usersC.CookieTest).Methods("GET")
-	r.Handle("/galleries/new", galleriesC.New).Methods("GET")
-	r.HandleFunc("/galleries", galleriesC.Create).Methods("POST")
+	r.Handle("/galleries/new", newGallery).Methods("GET")
+	r.HandleFunc("/galleries", createGallery).Methods("POST")
 	http.ListenAndServe(":3000", r)
 }
 
