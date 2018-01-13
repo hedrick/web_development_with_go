@@ -108,21 +108,23 @@ func (g *Galleries) Update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Gallery not found", http.StatusNotFound)
 		return
 	}
-
 	var vd views.Data
 	vd.Yield = gallery
 	var form GalleryForm
 	if err := parseForm(r, &form); err != nil {
 		vd.SetAlert(err)
 		g.EditView.Render(w, vd)
+		return
 	}
 	gallery.Title = form.Title
-	// TODO: Persist this gallery change in the DB after
-	// we add an Update method to our GalleryService in the
-	// models package
-	vd.Alert = &views.Alert{
-		Level:   views.AlertLvlSuccess,
-		Message: "Gallery updated successfuly!",
+	err = g.gs.Update(gallery)
+	if err != nil {
+		vd.SetAlert(err)
+	} else {
+		vd.Alert = &views.Alert{
+			Level:   views.AlertLvlSuccess,
+			Message: "Gallery successfully updated!",
+		}
 	}
 	g.EditView.Render(w, vd)
 }
