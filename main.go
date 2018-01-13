@@ -35,9 +35,10 @@ func main() {
 	defer services.Close()
 	services.AutoMigrate()
 
-	requireUserMw := middleware.RequireUser{
+	userMw := middleware.User{
 		UserService: services.User,
 	}
+	requireUserMw := middleware.RequireUser{}
 
 	r := mux.NewRouter()
 
@@ -72,7 +73,7 @@ func main() {
 	r.Handle("/galleries",
 		requireUserMw.ApplyFn(galleriesC.Index)).Methods("GET").
 		Name(controllers.IndexGalleries)
-	http.ListenAndServe(":3000", r)
+	http.ListenAndServe(":3000", userMw.Apply(r))
 }
 
 func must(err error) {
