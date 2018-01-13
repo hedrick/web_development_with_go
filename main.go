@@ -68,6 +68,8 @@ func main() {
 		requireUserMw.ApplyFn(galleriesC.Update)).Methods("POST")
 	r.HandleFunc("/galleries/{id:[0-9]+}/delete",
 		requireUserMw.ApplyFn(galleriesC.Delete)).Methods("POST")
+	r.Handle("/galleries",
+		requireUserMw.ApplyFn(galleriesC.Index)).Methods("GET")
 	http.ListenAndServe(":3000", r)
 }
 

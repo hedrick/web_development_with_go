@@ -120,7 +120,7 @@ func (gg *galleryGorm) ByID(id uint) (*Gallery, error) {
 // ByUserID returns a slice of Galleries
 func (gg *galleryGorm) ByUserID(userID uint) ([]Gallery, error) {
 	var galleries []Gallery
-	db := gg.db.Where("user id = ?", userID)
+	db := gg.db.Where("user_id = ?", userID)
 	if err := db.Find(&galleries).Error; err != nil {
 		return nil, err
 	}
