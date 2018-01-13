@@ -107,13 +107,6 @@ type UserDB interface {
 	Create(user *User) error
 	Update(user *User) error
 	Delete(id uint) error
-
-	// Used to close a DB connection
-	Close() error
-
-	// Migration helpers
-	AutoMigrate() error
-	DestructiveReset() error
 }
 
 // userGorm represents our database interaction layer
@@ -234,15 +227,6 @@ func (ug *userGorm) Delete(id uint) error {
 	return ug.db.Delete(&user).Error
 }
 
-// AutoMigrate will attempt to automatically migrate the
-// users table
-func (ug *userGorm) AutoMigrate() error {
-	if err := ug.db.AutoMigrate(&User{}).Error; err != nil {
-		return err
-	}
-	return nil
-}
-
 // ByID will look up a user with the provided ID.
 // If the user is found, we return a nil error
 // If the user is not found we return ErrNotFound
@@ -318,42 +302,13 @@ func (ug *userGorm) ByRemember(rememberHash string) (*User, error) {
 }
 
 // NewUserService - creates and returns a new UserService
-func NewUserService(connectionInfo string) (UserService, error) {
-	ug, err := newUserGorm(connectionInfo)
-	if err != nil {
-		return nil, err
-	}
+func NewUserService(db *gorm.DB) UserService {
+	ug := &userGorm{db}
 	hmac := hash.NewHMAC(hmacSecretKey)
 	uv := newUserValidator(ug, hmac)
 	return &userService{
 		UserDB: uv,
-	}, nil
-}
-
-// newUserGorm - creates and returns a new userGorm
-func newUserGorm(connectionInfo string) (*userGorm, error) {
-	db, err := gorm.Open("postgres", connectionInfo)
-	if err != nil {
-		return nil, err
 	}
-	db.LogMode(true)
-	return &userGorm{
-		db: db,
-	}, nil
-}
-
-// Close - closes UserService database connection
-func (ug *userGorm) Close() error {
-	return ug.db.Close()
-}
-
-// DestructiveReset drops the user table and rebuilds it
-func (ug *userGorm) DestructiveReset() error {
-	err := ug.db.DropTableIfExists(&User{}).Error
-	if err != nil {
-		return err
-	}
-	return ug.AutoMigrate()
 }
 
 /*
