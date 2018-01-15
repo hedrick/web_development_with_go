@@ -76,6 +76,11 @@ func main() {
 	r.HandleFunc("/galleries/{id:[0-9]+}/images",
 		requireUserMw.ApplyFn(galleriesC.ImageUpload)).
 		Methods("POST")
+
+	// Image routes
+	imageHandler := http.FileServer(http.Dir("./images/"))
+	r.PathPrefix("/images/").Handler(http.StripPrefix("/images/", imageHandler))
+
 	http.ListenAndServe(":3000", userMw.Apply(r))
 }
 
