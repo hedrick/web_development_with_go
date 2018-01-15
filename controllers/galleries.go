@@ -1,11 +1,7 @@
 package controllers
 
 import (
-	"fmt"
-	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
 
 	"../context"
@@ -21,6 +17,7 @@ type Galleries struct {
 	EditView  *views.View
 	IndexView *views.View
 	gs        models.GalleryService
+	is        models.ImageService
 	r         *mux.Router
 }
 
@@ -41,13 +38,15 @@ const (
 )
 
 // NewGalleries returns a new Galleries type to be rendered
-func NewGalleries(gs models.GalleryService, r *mux.Router) *Galleries {
+func NewGalleries(gs models.GalleryService,
+	is models.ImageService, r *mux.Router) *Galleries {
 	return &Galleries{
 		New:       views.NewView("bootstrap", "galleries/new"),
 		ShowView:  views.NewView("bootstrap", "galleries/show"),
 		EditView:  views.NewView("bootstrap", "galleries/edit"),
 		IndexView: views.NewView("bootstrap", "galleries/index"),
 		gs:        gs,
+		is:        is,
 		r:         r,
 	}
 }
@@ -205,23 +204,6 @@ func (g *Galleries) ImageUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create the directory to contain our images
-
-	// filepath.Join will return a path like:
-	// 	images/galleries/123
-	// We use filepath.Join instead of building the path
-	// manually because the slashes and other characters
-	// can vary between operating systems.
-	galleryPath := filepath.Join("images", "galleries",
-		fmt.Sprintf("%v", gallery.ID))
-	// Create our directory (and any necessary parent dirs)
-	// using 0755 permissions.
-	err = os.MkdirAll(galleryPath, 0755)
-	if err != nil {
-		vd.SetAlert(err)
-		g.EditView.Render(w, r, vd)
-	}
-
 	// Iterate over uploaded files to process them.
 	files := r.MultipartForm.File["images"]
 	for _, f := range files {
@@ -234,29 +216,18 @@ func (g *Galleries) ImageUpload(w http.ResponseWriter, r *http.Request) {
 		}
 		defer file.Close()
 
-		// Create a destination file
-		dst, err := os.Create(filepath.Join(galleryPath, f.Filename))
+		err = g.is.Create(gallery.ID, file, f.Filename)
 		if err != nil {
 			vd.SetAlert(err)
 			g.EditView.Render(w, r, vd)
 			return
 		}
-		defer dst.Close()
-
-		// Copy uploaded file data to the destination file
-		_, err = io.Copy(dst, file)
-		if err != nil {
-			vd.SetAlert(err)
-			g.EditView.Render(w, r, vd)
-			return
-		}
-
-		vd.Alert = &views.Alert{
-			Level:   views.AlertLvlSuccess,
-			Message: "Images successfully uploaded!",
-		}
-		g.EditView.Render(w, r, vd)
 	}
+	vd.Alert = &views.Alert{
+		Level:   views.AlertLvlSuccess,
+		Message: "Images successfully uploaded!",
+	}
+	g.EditView.Render(w, r, vd)
 }
 
 func (g *Galleries) galleryByID(w http.ResponseWriter,

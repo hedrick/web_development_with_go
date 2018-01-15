@@ -44,7 +44,7 @@ func main() {
 
 	staticC := controllers.NewStatic()
 	usersC := controllers.NewUsers(services.User)
-	galleriesC := controllers.NewGalleries(services.Gallery, r)
+	galleriesC := controllers.NewGalleries(services.Gallery, services.Image, r)
 	// galleriesC.New is an http.Handler, so we use Apply
 	newGallery := requireUserMw.Apply(galleriesC.New)
 	// galleriesC.Create is an http.HandlerFun, so we use ApplyFn
