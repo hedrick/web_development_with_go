@@ -44,7 +44,7 @@ func main() {
 
 	staticC := controllers.NewStatic()
 	usersC := controllers.NewUsers(services.User)
-	galleriesC := controllers.NewGalleries(services.Gallery, r)
+	galleriesC := controllers.NewGalleries(services.Gallery, services.Image, r)
 	// galleriesC.New is an http.Handler, so we use Apply
 	newGallery := requireUserMw.Apply(galleriesC.New)
 	// galleriesC.Create is an http.HandlerFun, so we use ApplyFn
@@ -73,6 +73,17 @@ func main() {
 	r.Handle("/galleries",
 		requireUserMw.ApplyFn(galleriesC.Index)).Methods("GET").
 		Name(controllers.IndexGalleries)
+	r.HandleFunc("/galleries/{id:[0-9]+}/images",
+		requireUserMw.ApplyFn(galleriesC.ImageUpload)).
+		Methods("POST")
+	r.HandleFunc("/galleries/{id:[0-9]+}/images/{filename}/delete",
+		requireUserMw.ApplyFn(galleriesC.ImageDelete)).
+		Methods("POST")
+
+	// Image routes
+	imageHandler := http.FileServer(http.Dir("./images/"))
+	r.PathPrefix("/images/").Handler(http.StripPrefix("/images/", imageHandler))
+
 	http.ListenAndServe(":3000", userMw.Apply(r))
 }
 
