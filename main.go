@@ -8,73 +8,64 @@ import (
 	"./middleware"
 	"./models"
 	"./rand"
-	"./views"
 
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 )
 
-var signUpView *views.View
-
-const (
-	host   = "localhost"
-	port   = 5432
-	user   = "postgres"
-	dbname = "lenslocked_dev"
-)
-
 func main() {
-	// Create a DB connection string and then use it to
-	// create our model services.
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"dbname=%s sslmode=disable",
-		host, port, user, dbname)
-
-	services, err := models.NewServices(psqlInfo)
+	cfg := DefaultConfig()
+	dbCfg := DefaultPostgresConfig()
+	services, err := models.NewServices(dbCfg.Dialect(),
+		dbCfg.ConnectionInfo())
 	if err != nil {
 		panic(err)
 	}
 	defer services.Close()
 	services.AutoMigrate()
 
+	r := mux.NewRouter()
+	staticC := controllers.NewStatic()
+	usersC := controllers.NewUsers(services.User)
+	galleriesC := controllers.NewGalleries(services.Gallery, services.Image, r)
+
 	userMw := middleware.User{
 		UserService: services.User,
 	}
 	requireUserMw := middleware.RequireUser{}
 
-	r := mux.NewRouter()
-
-	staticC := controllers.NewStatic()
-	usersC := controllers.NewUsers(services.User)
-	galleriesC := controllers.NewGalleries(services.Gallery, services.Image, r)
-	// galleriesC.New is an http.Handler, so we use Apply
-	newGallery := requireUserMw.Apply(galleriesC.New)
-	// galleriesC.Create is an http.HandlerFun, so we use ApplyFn
-	createGallery := requireUserMw.ApplyFn(galleriesC.Create)
-
 	r.Handle("/", staticC.Home).Methods("GET")
 	r.Handle("/contact", staticC.Contact).Methods("GET")
-	r.Handle("/faq", staticC.FAQ).Methods("GET")
-	// takes path and usersC's ResponseWriter
 	r.HandleFunc("/signup", usersC.New).Methods("GET")
 	r.HandleFunc("/signup", usersC.Create).Methods("POST")
 	r.Handle("/login", usersC.LoginView).Methods("GET")
 	r.HandleFunc("/login", usersC.Login).Methods("POST")
 	r.HandleFunc("/cookietest", usersC.CookieTest).Methods("GET")
-	r.Handle("/galleries/new", newGallery).Methods("GET")
-	r.HandleFunc("/galleries", createGallery).Methods("POST")
+	// Gallery routes
+	r.Handle("/galleries",
+		requireUserMw.ApplyFn(galleriesC.Index)).
+		Methods("GET").
+		Name(controllers.IndexGalleries)
+	r.Handle("/galleries/new",
+		requireUserMw.Apply(galleriesC.New)).
+		Methods("GET")
+	r.Handle("/galleries",
+		requireUserMw.ApplyFn(galleriesC.Create)).
+		Methods("POST")
 	r.HandleFunc("/galleries/{id:[0-9]+}",
-		galleriesC.Show).Methods("GET").Name(controllers.ShowGallery)
+		galleriesC.Show).
+		Methods("GET").
+		Name(controllers.ShowGallery)
 	r.HandleFunc("/galleries/{id:[0-9]+}/edit",
-		requireUserMw.ApplyFn(galleriesC.Edit)).Methods("GET").
+		requireUserMw.ApplyFn(galleriesC.Edit)).
+		Methods("GET").
 		Name(controllers.EditGallery)
 	r.HandleFunc("/galleries/{id:[0-9]+}/update",
-		requireUserMw.ApplyFn(galleriesC.Update)).Methods("POST")
+		requireUserMw.ApplyFn(galleriesC.Update)).
+		Methods("POST")
 	r.HandleFunc("/galleries/{id:[0-9]+}/delete",
-		requireUserMw.ApplyFn(galleriesC.Delete)).Methods("POST")
-	r.Handle("/galleries",
-		requireUserMw.ApplyFn(galleriesC.Index)).Methods("GET").
-		Name(controllers.IndexGalleries)
+		requireUserMw.ApplyFn(galleriesC.Delete)).
+		Methods("POST")
 	r.HandleFunc("/galleries/{id:[0-9]+}/images",
 		requireUserMw.ApplyFn(galleriesC.ImageUpload)).
 		Methods("POST")
@@ -82,27 +73,25 @@ func main() {
 		requireUserMw.ApplyFn(galleriesC.ImageDelete)).
 		Methods("POST")
 
+	// Image routes
+	imageHandler := http.FileServer(http.Dir("./images/"))
+	r.PathPrefix("/images/").Handler(http.StripPrefix("/images/", imageHandler))
+
 	// Assets
 	assetHandler := http.FileServer(http.Dir("./assets/"))
 	assetHandler = http.StripPrefix("/assets/", assetHandler)
 	r.PathPrefix("/assets/").Handler(assetHandler)
 
-	// Image routes
-	imageHandler := http.FileServer(http.Dir("./images/"))
-	r.PathPrefix("/images/").Handler(http.StripPrefix("/images/", imageHandler))
-
-	isProd := false
 	b, err := rand.Bytes(32)
 	if err != nil {
 		panic(err)
 	}
-	csrfMw := csrf.Protect(b, csrf.Secure(isProd))
+	// Use the config's IsProd method instead
+	csrfMw := csrf.Protect(b, csrf.Secure(cfg.IsProd()))
 
-	http.ListenAndServe(":3000", csrfMw(userMw.Apply(r)))
-}
-
-func must(err error) {
-	if err != nil {
-		panic(err)
-	}
+	// Our port is not provided via config, so we need to
+	// update the last bit of our main function.
+	fmt.Printf("Starting the server on :%d...\n", cfg.Port)
+	http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port),
+		csrfMw(userMw.Apply(r)))
 }
