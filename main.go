@@ -7,8 +7,10 @@ import (
 	"./controllers"
 	"./middleware"
 	"./models"
+	"./rand"
 	"./views"
 
+	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 )
 
@@ -89,7 +91,14 @@ func main() {
 	imageHandler := http.FileServer(http.Dir("./images/"))
 	r.PathPrefix("/images/").Handler(http.StripPrefix("/images/", imageHandler))
 
-	http.ListenAndServe(":3000", userMw.Apply(r))
+	isProd := false
+	b, err := rand.Bytes(32)
+	if err != nil {
+		panic(err)
+	}
+	csrfMw := csrf.Protect(b, csrf.Secure(isProd))
+
+	http.ListenAndServe(":3000", csrfMw(userMw.Apply(r)))
 }
 
 func must(err error) {

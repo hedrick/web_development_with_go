@@ -2,12 +2,14 @@ package views
 
 import (
 	"bytes"
+	"errors"
 	"html/template"
 	"io"
 	"net/http"
 	"path/filepath"
 
 	"../context"
+	"github.com/gorilla/csrf"
 )
 
 // View struct
@@ -30,7 +32,20 @@ func NewView(layout string, files ...string) *View {
 	addTemplatePath(files)
 	addTemplateExt(files)
 	files = append(files, layoutFiles()...)
-	t, err := template.ParseFiles(files...)
+
+	// We are changing how we create our templates, calling
+	// New("") to give us a template that we can add a function to
+	// before finally passing in files to parse as part of the template.
+	t, err := template.New("").Funcs(template.FuncMap{
+		"csrfField": func() (template.HTML, error) {
+			// If this is called without being repalced with a proper implementation
+			// returning an error as the second argument will cause our template
+			// pacakge to return an error when executed.
+			return "", errors.New("csrfField is not implemented")
+		},
+		// Once we have our template with a function we are going to pass in files
+		// to parse, much like we were previously.
+	}).ParseFiles(files...)
 	if err != nil {
 		panic(err)
 	}
@@ -60,15 +75,26 @@ func (v *View) Render(w http.ResponseWriter, r *http.Request, data interface{}) 
 	// Lookup and set the user to the User field
 	vd.User = context.User(r.Context())
 	var buf bytes.Buffer
-	err := v.Template.ExecuteTemplate(&buf, v.Layout, vd)
+
+	// We need to create the csrfField using the current http request.
+	csrfField := csrf.TemplateField(r)
+	tpl := v.Template.Funcs(template.FuncMap{
+		// We can also change the return type of our function, since we no longer
+		// need to worry about errors.
+		"csrfField": func() template.HTML {
+			// We can then create this closure that returnst he csrfField for
+			// any template that needs to access it.
+			return csrfField
+		},
+	})
+	// Then we continue to execute the template just like before.
+	err := tpl.ExecuteTemplate(&buf, v.Layout, vd)
 	if err != nil {
 		http.Error(w, "Something went wrong. If the problem "+
 			"persists, please email support@lenslocked.com",
 			http.StatusInternalServerError)
 		return
 	}
-	// If we get here that means our template executed correctly
-	// and we can copy the buffer to the ResponseWriter
 	io.Copy(w, &buf)
 }
 
