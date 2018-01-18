@@ -5,7 +5,7 @@ web_development_with_go
 
 I started this course on Jan 7, 2018 to get an immersive experience in writing and using [Go](https://golang.org/) and reinforcing full-stack web development practices.
 
-The course covers many topics from basic Go syntax to working with many [stdlib](https://golang.go/pkg/#stdlib) packages including: 
+The course covers many topics from basic Go syntax to working with many [stdlib](https://golang.org/pkg/#stdlib) packages including: 
 
 * net (net/http) 
 * crypto 
@@ -19,3 +19,10 @@ The course covers many topics from basic Go syntax to working with many [stdlib]
 * strcov
 * strings
 * time
+
+Additional (advanced) topics covered:
+
+* Using Postgresql with Go
+* GORM
+* Gorilla
+* Deploying a Go application via DigitalOcean
