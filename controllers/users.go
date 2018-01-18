@@ -43,7 +43,9 @@ func NewUsers(us models.UserService) *Users {
 // New - handler to handle web requests when a user visits
 // the signup page
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	u.NewView.Render(w, r, nil)
+	var form SignupForm
+	parseURLParams(r, &form)
+	u.NewView.Render(w, r, form)
 }
 
 // Create is used to process the signup form when a user
@@ -53,6 +55,7 @@ func (u *Users) New(w http.ResponseWriter, r *http.Request) {
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	var vd views.Data
 	var form SignupForm
+	vd.Yield = &form
 	if err := parseForm(r, &form); err != nil {
 		vd.SetAlert(err)
 		u.NewView.Render(w, r, vd)
@@ -141,7 +144,6 @@ func (u *Users) signIn(w http.ResponseWriter,
 //
 // Logout POST /logout
 func (u *Users) Logout(w http.ResponseWriter, r *http.Request) {
-	// First expire the user's cookie
 	cookie := http.Cookie{
 		Name:     "remember_token",
 		Value:    "",
@@ -149,15 +151,11 @@ func (u *Users) Logout(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	}
 	http.SetCookie(w, &cookie)
-	// Then we update the user with a new remember token
 	user := context.User(r.Context())
-	// We are ignoring errors for now because they are
-	// unlikely, and even if they do occur we can't recover
-	// now that the user doesn't have a valid cookie
+
 	token, _ := rand.RememberToken()
 	user.Remember = token
 	u.us.Update(user)
-	// Finally send the user to the home page
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
