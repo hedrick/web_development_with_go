@@ -36,7 +36,7 @@ func (pwrv *pwResetValidator) Create(pwr *pwReset) error {
 	err := runPwResetValFns(pwr,
 		pwrv.requireUserID,
 		pwrv.setTokenIfUnset,
-		pwrv.hmacToken
+		pwrv.hmacToken,
 	)
 	if err != nil {
 		return err
