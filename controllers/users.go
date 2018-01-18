@@ -3,7 +3,9 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+	"time"
 
+	"../context"
 	"../models"
 	"../rand"
 	"../views"
@@ -41,7 +43,9 @@ func NewUsers(us models.UserService) *Users {
 // New - handler to handle web requests when a user visits
 // the signup page
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	u.NewView.Render(w, r, nil)
+	var form SignupForm
+	parseURLParams(r, &form)
+	u.NewView.Render(w, r, form)
 }
 
 // Create is used to process the signup form when a user
@@ -51,6 +55,7 @@ func (u *Users) New(w http.ResponseWriter, r *http.Request) {
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	var vd views.Data
 	var form SignupForm
+	vd.Yield = &form
 	if err := parseForm(r, &form); err != nil {
 		vd.SetAlert(err)
 		u.NewView.Render(w, r, vd)
@@ -131,6 +136,27 @@ func (u *Users) signIn(w http.ResponseWriter,
 	}
 	http.SetCookie(w, &cookie)
 	return nil
+}
+
+// Logout is used to delete a user's session cookie
+// and invalidate their current remember token, which will
+// sign the current user out.
+//
+// Logout POST /logout
+func (u *Users) Logout(w http.ResponseWriter, r *http.Request) {
+	cookie := http.Cookie{
+		Name:     "remember_token",
+		Value:    "",
+		Expires:  time.Now(),
+		HttpOnly: true,
+	}
+	http.SetCookie(w, &cookie)
+	user := context.User(r.Context())
+
+	token, _ := rand.RememberToken()
+	user.Remember = token
+	u.us.Update(user)
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 // CookieTest is used to display cookies set on the current user

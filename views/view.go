@@ -33,22 +33,13 @@ func NewView(layout string, files ...string) *View {
 	addTemplatePath(files)
 	addTemplateExt(files)
 	files = append(files, layoutFiles()...)
-
-	// We are changing how we create our templates, calling
-	// New("") to give us a template that we can add a function to
-	// before finally passing in files to parse as part of the template.
 	t, err := template.New("").Funcs(template.FuncMap{
 		"csrfField": func() (template.HTML, error) {
-			// If this is called without being repalced with a proper implementation
-			// returning an error as the second argument will cause our template
-			// pacakge to return an error when executed.
 			return "", errors.New("csrfField is not implemented")
 		},
 		"pathEscape": func(s string) string {
 			return url.PathEscape(s)
 		},
-		// Once we have our template with a function we are going to pass in files
-		// to parse, much like we were previously.
 	}).ParseFiles(files...)
 	if err != nil {
 		panic(err)
@@ -75,6 +66,10 @@ func (v *View) Render(w http.ResponseWriter, r *http.Request, data interface{}) 
 		vd = Data{
 			Yield: data,
 		}
+	}
+	if alert := getAlert(r); alert != nil {
+		vd.Alert = alert
+		clearAlert(w)
 	}
 	// Lookup and set the user to the User field
 	vd.User = context.User(r.Context())

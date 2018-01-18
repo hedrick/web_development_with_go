@@ -82,6 +82,8 @@ func main() {
 	r.HandleFunc("/galleries/{id:[0-9]+}/images/{filename}/delete",
 		requireUserMw.ApplyFn(galleriesC.ImageDelete)).
 		Methods("POST")
+	r.Handle("/logout", requireUserMw.ApplyFn(usersC.Logout)).
+		Methods("POST")
 
 	// Image routes
 	imageHandler := http.FileServer(http.Dir("./images/"))
